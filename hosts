@@ -1,0 +1,9 @@
+[web-server]
+34.142.132.84 ansible_root_user=polawich ansible_become=true
+35.198.245.28 ansible_root_user=polawich ansible_become=true
+34.87.148.204 ansible_root_user=polawich ansible_become=true
+35.186.158.63 ansible_root_user=polawich ansible_become=true
+[monitor-server]
+35.197.147.18 ansible_root_user=polawich ansible_become=true
+; [loadtest-server]
+; 34.143.158.10 ansible_root_user=polawich ansible_become=true

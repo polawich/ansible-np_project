@@ -1,0 +1,81 @@
+---
+- hosts: web-server
+  vars:
+    node_exporter_version: 1.7.0
+    nginx_exporter_version: 0.11.0
+    nginx_exporter_nginx_plus: false
+    nginx_exporter_system_group: nginx-exporter
+    nginx_exporter_system_user: "{{ nginx_exporter_system_group }}"
+    nginx_exporter_release:
+      download_url: https://github.com/nginxinc/nginx-prometheus-exporter/releases
+      file: nginx-prometheus-exporter_{{ nginx_exporter_version }}_linux_{{ go_arch }}.tar.gz
+    nginx_exporter_direct_download: false
+    nginx_exporter_config: {}
+  tasks:
+    #update-package
+    - name: Update apt-get repo and cache
+      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+    - name: Upgrade all apt packages
+      apt: upgrade=dist force_apt_get=yes
+    #install nginx
+    - name: install nginx
+      apt: name=nginx state=latest
+    - name: start nginx
+      service:
+          name: nginx
+          state: started
+    #install node exporter
+    - name: download node exporter 
+      get_url:
+        url: https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz
+        dest: /tmp
+    - name: unarchive node exporter
+      unarchive:
+        remote_src: yes
+        src: /tmp/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz
+        dest: /tmp
+    - name: move node exporter to /usr/local/bin
+      copy:
+        src: /tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter
+        dest: /usr/local/bin/node_exporter
+        remote_src: yes
+        owner: root
+        group: root
+        mode: 0755
+    - name: install unit file to systemd
+      template:
+        src: templates/node_exporter.service.j2
+        dest: /etc/systemd/system/node_exporter.service
+        owner: root
+        group: root
+        mode: 0600
+    - name: configure systemd to use service
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        state: started
+        name: node_exporter.service
+    #install nginx exporter
+    # - name: download nginx_exporter binary archive
+    #   become: false
+    #   delegate_to: "{{ nginx_exporter_delegate_to }}"
+    #   run_once: "{{ 'false' if nginx_exporter_direct_download else 'true' }}"
+    #   ansible.builtin.get_url:
+    #     url: "{{ nginx_exporter_release.download_url }}/download/v{{ nginx_exporter_version }}/{{ nginx_exporter_release.file }}"
+    #     dest: "{{ nginx_exporter_local_tmp_directory }}/nginx_exporter-{{ nginx_exporter_version }}.tar.gz"
+    #     mode: 0660
+    #   register: _download_archive
+    #   until: _download_archive is succeeded
+    #   retries: 5
+    #   delay: 2
+    #   check_mode: false
+
+    # - name: extract nginx_exporter archive
+    #   become: false
+    #   delegate_to: "{{ nginx_exporter_delegate_to }}"
+    #   run_once: "{{ 'false' if nginx_exporter_direct_download else 'true' }}"
+    #   ansible.builtin.unarchive:
+    #     src: "{{ nginx_exporter_local_tmp_directory }}/nginx_exporter-{{ nginx_exporter_version }}.tar.gz"
+    #     dest: "{{ nginx_exporter_local_tmp_directory }}"
+    #     copy: false
+    #   register: _extract_archive
